@@ -3,9 +3,6 @@ extern crate serial;
 
 use std::io::{self, Read, Write};
 
-// use serial::prelude::*;
-use serial::SerialPort as Port;
-
 pub struct SerialPort(serial::SystemPort);
 
 // impl SerialPort {
@@ -33,7 +30,8 @@ impl io::Write for SerialPort {
     }
 }
 
-use mio::{Evented, Poll};
+use mio::{Evented, Poll, Token, EventSet, PollOpt};
+
 #[cfg(unix)] use mio::unix::{EventedFd};
 #[cfg(unix)] use std::os::unix::io::{AsRawFd};
 
@@ -79,81 +77,92 @@ impl Evented for SerialPort {
     }
 }
 
-use mio::{EventLoop, EventSet, PollOpt, Handler, Token};
+#[cfg(test)]
+mod tests {
+    extern crate serial;
 
-struct SerialPortHandler {
-    port: SerialPort
-}
+    use std::io::{self, Read, Write};
 
-impl Handler for SerialPortHandler {
-    type Timeout = ();
-    type Message = u32;
+    use serial::SerialPort as Port;
 
-    fn ready(&mut self, event_loop: &mut EventLoop<Self>, token: Token, events: EventSet) {
-        println!("ready {:?} {:?}", token, events);
+    use mio::{EventLoop, EventSet, PollOpt, Handler, Token};
 
-        match token {
-            Token(0) => {
-                let mut buf: Vec<u8> = (0..255).collect();
-                if events.is_writable() {
-                    self.port.write(&buf[..]).unwrap();
+    use super::SerialPort;
+
+    pub struct SerialPortHandler {
+        port: SerialPort
+    }
+
+    impl Handler for SerialPortHandler {
+        type Timeout = ();
+        type Message = u32;
+
+        fn ready(&mut self, event_loop: &mut EventLoop<Self>, token: Token, events: EventSet) {
+            println!("ready {:?} {:?}", token, events);
+
+            match token {
+                Token(0) => {
+                    let mut buf: Vec<u8> = (0..255).collect();
+                    if events.is_writable() {
+                        self.port.write(&buf[..]).unwrap();
+                    }
+                    if events.is_readable() {
+                        self.port.read(&mut buf[..]).unwrap();
+                    }
+
+                    event_loop.shutdown();
                 }
-                if events.is_readable() {
-                    self.port.read(&mut buf[..]).unwrap();
+                _ => {
+
                 }
-
-                event_loop.shutdown();
-            }
-            _ => {
-
             }
         }
+        fn notify(&mut self, event_loop: &mut EventLoop<SerialPortHandler>, _msg: Self::Message) {
+            println!("{:?}", _msg);
+            event_loop.shutdown();
+        }
     }
-    fn notify(&mut self, event_loop: &mut EventLoop<SerialPortHandler>, _msg: Self::Message) {
-        println!("{:?}", _msg);
-        event_loop.shutdown();
-    }
-}
 
-use std::time::Duration;
+    use std::time::Duration;
 
-fn setup_serial_port(serial_port: &mut serial::SystemPort) -> io::Result<()> {
-    try!(serial_port.reconfigure(&|settings| {
-        try!(settings.set_baud_rate(serial::Baud115200));
-        // try!(settings.set_baud_rate(serial::Baud9600));
-        settings.set_char_size(serial::Bits8);
-        settings.set_parity(serial::ParityNone);
-        settings.set_stop_bits(serial::Stop1);
-        settings.set_flow_control(serial::FlowNone);
+    fn setup_serial_port(serial_port: &mut serial::SystemPort) -> io::Result<()> {
+        try!(serial_port.reconfigure(&|settings| {
+            try!(settings.set_baud_rate(serial::Baud115200));
+            // try!(settings.set_baud_rate(serial::Baud9600));
+            settings.set_char_size(serial::Bits8);
+            settings.set_parity(serial::ParityNone);
+            settings.set_stop_bits(serial::Stop1);
+            settings.set_flow_control(serial::FlowNone);
+            Ok(())
+        }));
+
+        try!(serial_port.set_timeout(Duration::from_millis(10000)));
+
         Ok(())
-    }));
+    }
 
-    try!(serial_port.set_timeout(Duration::from_millis(10000)));
+    #[test]
+    fn serial_port() {
+        let port_name = "/dev/tty.SLAB_USBtoUART";
+        let port_name = "/dev/tty.usbserial";
+        let port_name = "/dev/tty.usbmodem1A1211";
 
-    Ok(())
-}
+        let mut serial_port = serial::open(port_name).unwrap();
 
-#[test]
-fn serial_port() {
-    let port_name = "/dev/tty.SLAB_USBtoUART";
-    let port_name = "/dev/tty.usbserial";
-    let port_name = "/dev/tty.usbmodem1A1211";
+        setup_serial_port(&mut serial_port).unwrap();
 
-    let mut serial_port = serial::open(port_name).unwrap();
+        let port = SerialPort::from(serial_port);
 
-    setup_serial_port(&mut serial_port).unwrap();
+        let mut handler = SerialPortHandler { port: port };
 
-    let port = SerialPort::from(serial_port);
+        let mut event_loop = EventLoop::new().unwrap();
 
-    let mut handler = SerialPortHandler { port: port };
+        event_loop.register(&handler.port, Token(0), EventSet::writable(), PollOpt::level()).unwrap();
 
-    let mut event_loop = EventLoop::new().unwrap();
+        let _ = event_loop.run(&mut handler);
 
-    event_loop.register(&handler.port, Token(0), EventSet::writable(), PollOpt::level()).unwrap();
+        event_loop.reregister(&handler.port, Token(0), EventSet::readable(), PollOpt::level()).unwrap();
 
-    let _ = event_loop.run(&mut handler);
-
-    event_loop.reregister(&handler.port, Token(0), EventSet::readable(), PollOpt::level()).unwrap();
-
-    let _ = event_loop.run(&mut handler);
+        let _ = event_loop.run(&mut handler);
+    }
 }
