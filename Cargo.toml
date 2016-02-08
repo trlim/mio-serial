@@ -1,0 +1,8 @@
+[package]
+name = "mio-serialport"
+version = "0.1.0"
+authors = ["Tae-il Lim <trlim@iotok.kr>"]
+
+[dependencies]
+mio = { git = "https://github.com/carllerche/mio.git" }
+serial = "0.3"
