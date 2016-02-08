@@ -4,11 +4,22 @@ extern crate serial;
 use std::ffi::OsStr;
 use std::io::{self, Read, Write};
 
+use serial::SerialPort as _SerialPort;
+pub use serial::PortSettings;
+
 pub struct SerialPort(pub serial::SystemPort);
 
 impl SerialPort {
     pub fn open<T: AsRef<OsStr> + ?Sized>(port_name: &T) -> io::Result<SerialPort> {
         let system_port = try!(serial::open(port_name));
+
+        Ok(SerialPort::from(system_port))
+    }
+
+    pub fn open_with_settings<T: AsRef<OsStr> + ?Sized>(port_name: &T, settings: &PortSettings) -> io::Result<SerialPort> {
+        let mut system_port = try!(serial::open(port_name));
+
+        try!(system_port.configure(settings));
 
         Ok(SerialPort::from(system_port))
     }
@@ -89,11 +100,11 @@ mod tests {
 
     use std::io::{self, Read, Write};
 
-    use serial::SerialPort as Port;
+    use serial::SerialPort as _SerialPort;
 
     use mio::{EventLoop, EventSet, PollOpt, Handler, Token};
 
-    use super::SerialPort;
+    use super::{SerialPort, PortSettings};
 
     pub struct SerialPortHandler {
         port: SerialPort
@@ -152,6 +163,17 @@ mod tests {
         let port_name = "/dev/tty.SLAB_USBtoUART";
         let port_name = "/dev/tty.usbserial";
         let port_name = "/dev/tty.usbmodem1A1211";
+
+        {
+            let _ = SerialPort::open_with_settings(port_name,
+                &PortSettings {
+                    baud_rate: serial::Baud115200,
+                    char_size: serial::Bits8,
+                    parity: serial::ParityNone,
+                    stop_bits: serial::Stop1,
+                    flow_control: serial::FlowNone
+                }).unwrap();
+        }
 
         let mut serial_port = SerialPort::open(port_name).unwrap();
 
