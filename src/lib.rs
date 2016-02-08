@@ -1,12 +1,18 @@
 extern crate mio;
 extern crate serial;
 
+use std::ffi::OsStr;
 use std::io::{self, Read, Write};
 
-pub struct SerialPort(serial::SystemPort);
+pub struct SerialPort(pub serial::SystemPort);
 
-// impl SerialPort {
-// }
+impl SerialPort {
+    pub fn open<T: AsRef<OsStr> + ?Sized>(port_name: &T) -> io::Result<SerialPort> {
+        let system_port = try!(serial::open(port_name));
+
+        Ok(SerialPort::from(system_port))
+    }
+}
 
 impl From<serial::SystemPort> for SerialPort {
     fn from(port: serial::SystemPort) -> SerialPort {
@@ -147,13 +153,11 @@ mod tests {
         let port_name = "/dev/tty.usbserial";
         let port_name = "/dev/tty.usbmodem1A1211";
 
-        let mut serial_port = serial::open(port_name).unwrap();
+        let mut serial_port = SerialPort::open(port_name).unwrap();
 
-        setup_serial_port(&mut serial_port).unwrap();
+        setup_serial_port(&mut serial_port.0).unwrap();
 
-        let port = SerialPort::from(serial_port);
-
-        let mut handler = SerialPortHandler { port: port };
+        let mut handler = SerialPortHandler { port: serial_port };
 
         let mut event_loop = EventLoop::new().unwrap();
 
