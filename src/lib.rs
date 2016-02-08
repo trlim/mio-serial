@@ -1,14 +1,12 @@
 extern crate mio;
 extern crate serial;
 
+use std::io::{self, Read, Write};
+
 // use serial::prelude::*;
 use serial::SerialPort as Port;
 
-use mio::{Evented, Poll};
-#[cfg(unix)] use mio::unix::{EventedFd};
-#[cfg(unix)] use std::os::unix::io::{AsRawFd};
-
-struct SerialPort(serial::SystemPort);
+pub struct SerialPort(serial::SystemPort);
 
 // impl SerialPort {
 // }
@@ -18,6 +16,26 @@ impl From<serial::SystemPort> for SerialPort {
         SerialPort(port)
     }
 }
+
+impl io::Read for SerialPort {
+    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+        self.0.read(buf)
+    }
+}
+
+impl io::Write for SerialPort {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        self.0.write(buf)
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        self.0.flush()
+    }
+}
+
+use mio::{Evented, Poll};
+#[cfg(unix)] use mio::unix::{EventedFd};
+#[cfg(unix)] use std::os::unix::io::{AsRawFd};
 
 #[cfg(unix)]
 impl Evented for SerialPort {
@@ -61,7 +79,42 @@ impl Evented for SerialPort {
     }
 }
 
-use std::io;
+use mio::{EventLoop, EventSet, PollOpt, Handler, Token};
+
+struct SerialPortHandler {
+    port: SerialPort
+}
+
+impl Handler for SerialPortHandler {
+    type Timeout = ();
+    type Message = u32;
+
+    fn ready(&mut self, event_loop: &mut EventLoop<Self>, token: Token, events: EventSet) {
+        println!("ready {:?} {:?}", token, events);
+
+        match token {
+            Token(0) => {
+                let mut buf: Vec<u8> = (0..255).collect();
+                if events.is_writable() {
+                    self.port.write(&buf[..]).unwrap();
+                }
+                if events.is_readable() {
+                    self.port.read(&mut buf[..]).unwrap();
+                }
+
+                event_loop.shutdown();
+            }
+            _ => {
+
+            }
+        }
+    }
+    fn notify(&mut self, event_loop: &mut EventLoop<SerialPortHandler>, _msg: Self::Message) {
+        println!("{:?}", _msg);
+        event_loop.shutdown();
+    }
+}
+
 use std::time::Duration;
 
 fn setup_serial_port(serial_port: &mut serial::SystemPort) -> io::Result<()> {
@@ -80,36 +133,11 @@ fn setup_serial_port(serial_port: &mut serial::SystemPort) -> io::Result<()> {
     Ok(())
 }
 
-use mio::{EventLoop, EventSet, PollOpt, Handler, Token};
-
-struct SerialPortHandler;
-
-impl Handler for SerialPortHandler {
-    type Timeout = ();
-    type Message = u32;
-
-    fn ready(&mut self, event_loop: &mut EventLoop<Self>, token: Token, events: EventSet) {
-        println!("ready {:?} {:?}", token, events);
-
-        match token {
-            Token(0) => {
-                event_loop.shutdown();
-            }
-            _ => {
-
-            }
-        }
-    }
-    fn notify(&mut self, event_loop: &mut EventLoop<SerialPortHandler>, _msg: Self::Message) {
-        println!("{:?}", _msg);
-        event_loop.shutdown();
-    }
-}
-
 #[test]
-fn it_works() {
+fn serial_port() {
     let port_name = "/dev/tty.SLAB_USBtoUART";
     let port_name = "/dev/tty.usbserial";
+    let port_name = "/dev/tty.usbmodem1A1211";
 
     let mut serial_port = serial::open(port_name).unwrap();
 
@@ -117,9 +145,15 @@ fn it_works() {
 
     let port = SerialPort::from(serial_port);
 
+    let mut handler = SerialPortHandler { port: port };
+
     let mut event_loop = EventLoop::new().unwrap();
 
-    event_loop.register(&port, Token(0), EventSet::readable(), PollOpt::level()).unwrap();
+    event_loop.register(&handler.port, Token(0), EventSet::writable(), PollOpt::level()).unwrap();
 
-    let _ = event_loop.run(&mut SerialPortHandler);
+    let _ = event_loop.run(&mut handler);
+
+    event_loop.reregister(&handler.port, Token(0), EventSet::readable(), PollOpt::level()).unwrap();
+
+    let _ = event_loop.run(&mut handler);
 }
