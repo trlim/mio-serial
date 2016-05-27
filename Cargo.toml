@@ -1,8 +1,13 @@
 [package]
-name = "mio-serialport"
+name = "serial-mio"
 version = "0.1.0"
+license = "MIT"
 authors = ["Tae-il Lim <trlim@iotok.kr>"]
+description = "Extends serial-rs for mio"
+homepage = "https://github.com/trlim/serial-mio"
+repository = "https://github.com/trlim/serial-mio"
+keywords = ["mio", "serial"]
 
 [dependencies]
 mio = { git = "https://github.com/carllerche/mio.git" }
-serial = "0.3"
+serial = "^0.3.2"

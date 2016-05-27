@@ -1,0 +1,24 @@
+= Serial for MIO
+
+This crate provides extension to David Cuddeback's `serial` for simpler integration with `mio` event loop.
+
+== Usage
+
+`Cargo.toml`
+----
+[dependencies]
+serial = "0.3"
+serial-mio = "0.1"
+----
+
+== Compatibility
+
+The following platforms are confirmed to be compatible:
+
+* OS X (x86_64)
+
+== License
+
+Copyright © 2016 Tae-il Lim
+
+Distributed under the MIT License.
