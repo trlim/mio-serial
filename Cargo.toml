@@ -11,3 +11,10 @@ keywords = ["mio", "serial"]
 [dependencies]
 mio = "0.5"
 serial = "0.3"
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "serio"
+path = "src/bin.rs"
