@@ -47,50 +47,50 @@ impl io::Write for SerialPort {
     }
 }
 
-use mio::{Evented, Poll, Token, EventSet, PollOpt};
+use mio::{Evented, Selector, Token, EventSet, PollOpt};
 
 #[cfg(unix)] use mio::unix::{EventedFd};
 #[cfg(unix)] use std::os::unix::io::{AsRawFd};
 
 #[cfg(unix)]
 impl Evented for SerialPort {
-    fn register(&self, poll: &mut Poll, token: Token, interest: EventSet, opts: PollOpt) -> io::Result<()> {
+    fn register(&self, selector: &mut Selector, token: Token, interest: EventSet, opts: PollOpt) -> io::Result<()> {
         let fd = self.0.as_raw_fd();
         let evented = EventedFd(&fd);
-        evented.register(poll, token, interest, opts)
+        evented.register(selector, token, interest, opts)
     }
 
-    fn reregister(&self, poll: &mut Poll, token: Token, interest: EventSet, opts: PollOpt) -> io::Result<()> {
+    fn reregister(&self, selector: &mut Selector, token: Token, interest: EventSet, opts: PollOpt) -> io::Result<()> {
         let fd = self.0.as_raw_fd();
         let evented = EventedFd(&fd);
-        evented.reregister(poll, token, interest, opts)
+        evented.reregister(selector, token, interest, opts)
     }
 
-    fn deregister(&self, poll: &mut Poll) -> io::Result<()> {
+    fn deregister(&self, selector: &mut Selector) -> io::Result<()> {
         let fd = self.0.as_raw_fd();
         let evented = EventedFd(&fd);
-        evented.deregister(poll)
+        evented.deregister(selector)
     }
 }
 
 #[cfg(windows)]
 impl Evented for SerialPort {
-    fn register(&self, poll: &mut Poll, token: Token, interest: EventSet, opts: PollOpt) -> io::Result<()> {
+    fn register(&self, selector: &mut Selector, token: Token, interest: EventSet, opts: PollOpt) -> io::Result<()> {
         let fd = self.0.as_raw_handle();
         let evented = EventedHandle(&handle);
-        evented.register(poll, token, interest, opts)
+        evented.register(selector, token, interest, opts)
     }
 
-    fn reregister(&self, poll: &mut Poll, token: Token, interest: EventSet, opts: PollOpt) -> io::Result<()> {
+    fn reregister(&self, selector: &mut Selector, token: Token, interest: EventSet, opts: PollOpt) -> io::Result<()> {
         let fd = self.0.as_raw_handle();
         let evented = EventedHandle(&handle);
-        evented.reregister(poll, token, interest, opts)
+        evented.reregister(selector, token, interest, opts)
     }
 
-    fn deregister(&self, poll: &mut Poll) -> io::Result<()> {
+    fn deregister(&self, selector: &mut Selector) -> io::Result<()> {
         let fd = self.0.as_raw_handle();
         let evented = EventedHandle(&handle);
-        evented.deregister(poll)
+        evented.deregister(selector)
     }
 }
 
