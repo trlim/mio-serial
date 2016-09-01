@@ -9,5 +9,5 @@ repository = "https://github.com/trlim/serial-mio"
 keywords = ["mio", "serial"]
 
 [dependencies]
-serial = "^0.3.2"
 mio = "0.5"
+serial = "0.3"
