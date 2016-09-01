@@ -5,7 +5,14 @@ use std::ffi::OsStr;
 use std::io;
 
 use serial::SerialPort as _SerialPort;
+
+// Re-exports
 pub use serial::PortSettings;
+pub use serial::BaudRate::*;
+pub use serial::CharSize::*;
+pub use serial::Parity::*;
+pub use serial::StopBits::*;
+pub use serial::FlowControl::*;
 
 pub struct SerialPort(pub serial::SystemPort);
 

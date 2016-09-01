@@ -1,5 +1,4 @@
 extern crate mio;
-extern crate serial;
 extern crate serial_mio;
 
 use serial_mio::{SerialPort, PortSettings};
@@ -40,11 +39,11 @@ pub fn main() {
 
     let serial_port = SerialPort::open_with_settings(port_name,
         &PortSettings {
-            baud_rate: serial::Baud115200,
-            char_size: serial::Bits8,
-            parity: serial::ParityNone,
-            stop_bits: serial::Stop1,
-            flow_control: serial::FlowNone
+            baud_rate: serial_mio::Baud115200,
+            char_size: serial_mio::Bits8,
+            parity: serial_mio::ParityNone,
+            stop_bits: serial_mio::Stop1,
+            flow_control: serial_mio::FlowNone
         }).unwrap();
 
     let mut handler = SerialPortHandler { port: serial_port };
