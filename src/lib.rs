@@ -14,13 +14,15 @@ pub use serial::Parity::*;
 pub use serial::StopBits::*;
 pub use serial::FlowControl::*;
 
-pub struct SerialPort(pub serial::SystemPort);
+pub struct SerialPort {
+    inner: serial::SystemPort,
+}
 
 impl SerialPort {
     pub fn open<T: AsRef<OsStr> + ?Sized>(port_name: &T) -> io::Result<SerialPort> {
         let system_port = try!(serial::open(port_name));
 
-        Ok(SerialPort::from(system_port))
+        Ok(SerialPort { inner: system_port })
     }
 
     pub fn open_with_settings<T: AsRef<OsStr> + ?Sized>(port_name: &T, settings: &PortSettings) -> io::Result<SerialPort> {
@@ -28,29 +30,34 @@ impl SerialPort {
 
         try!(system_port.configure(settings));
 
-        Ok(SerialPort::from(system_port))
+        Ok(SerialPort { inner: system_port })
     }
-}
 
-impl From<serial::SystemPort> for SerialPort {
-    fn from(port: serial::SystemPort) -> SerialPort {
-        SerialPort(port)
+    pub fn system_port(&mut self) -> &mut serial::SystemPort {
+        &mut self.inner
     }
 }
 
 impl io::Read for SerialPort {
-    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        self.0.read(buf)
+    fn read(&mut self, bytes: &mut [u8]) -> io::Result<usize> {
+        self.inner.read(bytes)
     }
 }
 
 impl io::Write for SerialPort {
-    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        self.0.write(buf)
+    fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
+        self.inner.write(bytes)
     }
 
     fn flush(&mut self) -> io::Result<()> {
-        self.0.flush()
+        self.inner.flush()
+    }
+}
+
+#[cfg(unix)]
+impl AsRawFd for SerialPort {
+    fn as_raw_fd(&self) -> i32 {
+        self.inner.as_raw_fd()
     }
 }
 
@@ -62,42 +69,30 @@ use mio::{Evented, Selector, Token, EventSet, PollOpt};
 #[cfg(unix)]
 impl Evented for SerialPort {
     fn register(&self, selector: &mut Selector, token: Token, interest: EventSet, opts: PollOpt) -> io::Result<()> {
-        let fd = self.0.as_raw_fd();
-        let evented = EventedFd(&fd);
-        evented.register(selector, token, interest, opts)
+        EventedFd(&self.as_raw_fd()).register(selector, token, interest, opts)
     }
 
     fn reregister(&self, selector: &mut Selector, token: Token, interest: EventSet, opts: PollOpt) -> io::Result<()> {
-        let fd = self.0.as_raw_fd();
-        let evented = EventedFd(&fd);
-        evented.reregister(selector, token, interest, opts)
+        EventedFd(&self.as_raw_fd()).reregister(selector, token, interest, opts)
     }
 
     fn deregister(&self, selector: &mut Selector) -> io::Result<()> {
-        let fd = self.0.as_raw_fd();
-        let evented = EventedFd(&fd);
-        evented.deregister(selector)
+        EventedFd(&self.as_raw_fd()).deregister(selector)
     }
 }
 
 #[cfg(windows)]
 impl Evented for SerialPort {
     fn register(&self, selector: &mut Selector, token: Token, interest: EventSet, opts: PollOpt) -> io::Result<()> {
-        let fd = self.0.as_raw_handle();
-        let evented = EventedHandle(&handle);
-        evented.register(selector, token, interest, opts)
+        EventedHandle(&self.as_raw_handle()).register(selector, token, interest, opts)
     }
 
     fn reregister(&self, selector: &mut Selector, token: Token, interest: EventSet, opts: PollOpt) -> io::Result<()> {
-        let fd = self.0.as_raw_handle();
-        let evented = EventedHandle(&handle);
-        evented.reregister(selector, token, interest, opts)
+        EventedHandle(&self.as_raw_handle()).reregister(selector, token, interest, opts)
     }
 
     fn deregister(&self, selector: &mut Selector) -> io::Result<()> {
-        let fd = self.0.as_raw_handle();
-        let evented = EventedHandle(&handle);
-        evented.deregister(selector)
+        EventedHandle(&self.as_raw_handle()).deregister(selector)
     }
 }
 
