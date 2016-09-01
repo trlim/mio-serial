@@ -2,7 +2,7 @@ extern crate mio;
 extern crate serial;
 
 use std::ffi::OsStr;
-use std::io::{self, Read, Write};
+use std::io;
 
 use serial::SerialPort as _SerialPort;
 pub use serial::PortSettings;
