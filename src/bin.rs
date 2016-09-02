@@ -42,8 +42,11 @@ impl Handler for SerialPortHandler {
 pub fn main() {
     dotenv().ok();
 
-    let port_name = env::var("SERIAL_PORT")
+    let port_name = env::args().nth(1)
+        .or(env::var("SERIAL_PORT").ok())
         .expect("serial port name must be specified");
+
+    println!("port {:?}", port_name);
 
     let serial_port = SerialPort::open_with_settings(port_name.as_str(),
         &PortSettings {
