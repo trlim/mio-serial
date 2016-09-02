@@ -96,16 +96,21 @@ impl Evented for SerialPort {
     }
 }
 
+extern crate dotenv;
+
 #[cfg(test)]
 mod tests {
     extern crate serial;
+
+    use dotenv::dotenv;
+    use std::env;
 
     use std::io::{self, Read, Write};
 
     use serial::SerialPort as _SerialPort;
 
-    use mio::{EventLoop, EventSet, PollOpt, Handler, Token};
-
+    use mio::{Ready, PollOpt, Token};
+    use mio::deprecated::{EventLoop, Handler};
     use super::{SerialPort, PortSettings};
 
     pub struct SerialPortHandler {
@@ -116,7 +121,7 @@ mod tests {
         type Timeout = ();
         type Message = u32;
 
-        fn ready(&mut self, event_loop: &mut EventLoop<Self>, token: Token, events: EventSet) {
+        fn ready(&mut self, event_loop: &mut EventLoop<Self>, token: Token, events: Ready) {
             println!("ready {:?} {:?}", token, events);
 
             match token {
@@ -145,16 +150,6 @@ mod tests {
     use std::time::Duration;
 
     fn setup_serial_port(serial_port: &mut serial::SystemPort) -> io::Result<()> {
-        try!(serial_port.reconfigure(&|settings| {
-            try!(settings.set_baud_rate(serial::Baud115200));
-            // try!(settings.set_baud_rate(serial::Baud9600));
-            settings.set_char_size(serial::Bits8);
-            settings.set_parity(serial::ParityNone);
-            settings.set_stop_bits(serial::Stop1);
-            settings.set_flow_control(serial::FlowNone);
-            Ok(())
-        }));
-
         try!(serial_port.set_timeout(Duration::from_millis(10000)));
 
         Ok(())
@@ -162,34 +157,31 @@ mod tests {
 
     #[test]
     fn serial_port() {
-        let port_name = "/dev/tty.SLAB_USBtoUART";
-        let port_name = "/dev/tty.usbserial";
-        let port_name = "/dev/tty.usbmodem1A1211";
+        dotenv().ok();
 
-        {
-            let _ = SerialPort::open_with_settings(port_name,
-                &PortSettings {
-                    baud_rate: serial::Baud115200,
-                    char_size: serial::Bits8,
-                    parity: serial::ParityNone,
-                    stop_bits: serial::Stop1,
-                    flow_control: serial::FlowNone
-                }).unwrap();
-        }
+        let port_name = env::var("SERIAL_PORT")
+            .expect("Environment variable SERIAL_PORT must be specified");
 
-        let mut serial_port = SerialPort::open(port_name).unwrap();
+        let mut serial_port = SerialPort::open_with_settings(port_name.as_str(),
+            &PortSettings {
+                baud_rate: serial::Baud115200,
+                char_size: serial::Bits8,
+                parity: serial::ParityNone,
+                stop_bits: serial::Stop1,
+                flow_control: serial::FlowNone
+            }).unwrap();
 
-        setup_serial_port(&mut serial_port.0).unwrap();
+        setup_serial_port(&mut serial_port.system_port()).unwrap();
 
         let mut handler = SerialPortHandler { port: serial_port };
 
         let mut event_loop = EventLoop::new().unwrap();
 
-        event_loop.register(&handler.port, Token(0), EventSet::writable(), PollOpt::level()).unwrap();
+        event_loop.register(&handler.port, Token(0), Ready::writable(), PollOpt::level()).unwrap();
 
         let _ = event_loop.run(&mut handler);
 
-        event_loop.reregister(&handler.port, Token(0), EventSet::readable(), PollOpt::level()).unwrap();
+        event_loop.reregister(&handler.port, Token(0), Ready::readable(), PollOpt::level()).unwrap();
 
         let _ = event_loop.run(&mut handler);
     }
