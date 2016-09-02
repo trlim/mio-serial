@@ -11,6 +11,7 @@ keywords = ["mio", "serial"]
 [dependencies]
 mio = { git = "https://github.com/carllerche/mio.git" }
 serial = "0.3"
+dotenv = "0.8"
 
 [lib]
 path = "src/lib.rs"

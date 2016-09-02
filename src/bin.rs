@@ -1,5 +1,9 @@
 extern crate mio;
 extern crate serial_mio;
+extern crate dotenv;
+
+use dotenv::dotenv;
+use std::env;
 
 use serial_mio::{SerialPort, PortSettings};
 use mio::{Ready, PollOpt, Token};
@@ -36,16 +40,19 @@ impl Handler for SerialPortHandler {
 }
 
 pub fn main() {
-    let port_name = "/dev/tty.usbserial";
+    dotenv().ok();
 
-    let serial_port = SerialPort::open_with_settings(port_name,
+    let port_name = env::var("SERIAL_PORT")
+        .expect("serial port name must be specified");
+
+    let serial_port = SerialPort::open_with_settings(port_name.as_str(),
         &PortSettings {
             baud_rate: serial_mio::Baud115200,
             char_size: serial_mio::Bits8,
             parity: serial_mio::ParityNone,
             stop_bits: serial_mio::Stop1,
             flow_control: serial_mio::FlowNone
-        }).unwrap();
+        }).expect("Can't open serial port");
 
     let mut handler = SerialPortHandler { port: serial_port };
 
