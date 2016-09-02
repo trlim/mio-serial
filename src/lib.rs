@@ -61,38 +61,38 @@ impl AsRawFd for SerialPort {
     }
 }
 
-use mio::{Evented, Selector, Token, EventSet, PollOpt};
+use mio::{Evented, Poll, Token, Ready, PollOpt};
 
 #[cfg(unix)] use mio::unix::{EventedFd};
 #[cfg(unix)] use std::os::unix::io::{AsRawFd};
 
 #[cfg(unix)]
 impl Evented for SerialPort {
-    fn register(&self, selector: &mut Selector, token: Token, interest: EventSet, opts: PollOpt) -> io::Result<()> {
-        EventedFd(&self.as_raw_fd()).register(selector, token, interest, opts)
+    fn register(&self, poll: &Poll, token: Token, interest: Ready, opts: PollOpt) -> io::Result<()> {
+        EventedFd(&self.as_raw_fd()).register(poll, token, interest, opts)
     }
 
-    fn reregister(&self, selector: &mut Selector, token: Token, interest: EventSet, opts: PollOpt) -> io::Result<()> {
-        EventedFd(&self.as_raw_fd()).reregister(selector, token, interest, opts)
+    fn reregister(&self, poll: &Poll, token: Token, interest: Ready, opts: PollOpt) -> io::Result<()> {
+        EventedFd(&self.as_raw_fd()).reregister(poll, token, interest, opts)
     }
 
-    fn deregister(&self, selector: &mut Selector) -> io::Result<()> {
-        EventedFd(&self.as_raw_fd()).deregister(selector)
+    fn deregister(&self, poll: &Poll) -> io::Result<()> {
+        EventedFd(&self.as_raw_fd()).deregister(poll)
     }
 }
 
 #[cfg(windows)]
 impl Evented for SerialPort {
-    fn register(&self, selector: &mut Selector, token: Token, interest: EventSet, opts: PollOpt) -> io::Result<()> {
-        EventedHandle(&self.as_raw_handle()).register(selector, token, interest, opts)
+    fn register(&self, poll: &Poll, token: Token, interest: Ready, opts: PollOpt) -> io::Result<()> {
+        EventedHandle(&self.as_raw_handle()).register(poll, token, interest, opts)
     }
 
-    fn reregister(&self, selector: &mut Selector, token: Token, interest: EventSet, opts: PollOpt) -> io::Result<()> {
-        EventedHandle(&self.as_raw_handle()).reregister(selector, token, interest, opts)
+    fn reregister(&self, poll: &Poll, token: Token, interest: Ready, opts: PollOpt) -> io::Result<()> {
+        EventedHandle(&self.as_raw_handle()).reregister(poll, token, interest, opts)
     }
 
-    fn deregister(&self, selector: &mut Selector) -> io::Result<()> {
-        EventedHandle(&self.as_raw_handle()).deregister(selector)
+    fn deregister(&self, poll: &Poll) -> io::Result<()> {
+        EventedHandle(&self.as_raw_handle()).deregister(poll)
     }
 }
 

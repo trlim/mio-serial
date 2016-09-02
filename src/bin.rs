@@ -2,7 +2,8 @@ extern crate mio;
 extern crate serial_mio;
 
 use serial_mio::{SerialPort, PortSettings};
-use mio::{EventLoop, EventSet, PollOpt, Handler, Token};
+use mio::{Ready, PollOpt, Token};
+use mio::deprecated::{EventLoop, Handler};
 use std::io::{Read/*, Write*/};
 
 use std::str;
@@ -15,7 +16,7 @@ impl Handler for SerialPortHandler {
     type Timeout = ();
     type Message = ();
 
-    fn ready(&mut self, _event_loop: &mut EventLoop<Self>, token: Token, events: EventSet) {
+    fn ready(&mut self, _event_loop: &mut EventLoop<Self>, token: Token, events: Ready) {
         match token {
             Token(0) => {
                 let mut buf = [0; 256];
@@ -49,7 +50,7 @@ pub fn main() {
     let mut handler = SerialPortHandler { port: serial_port };
 
     if let Ok(mut event_loop) = EventLoop::new() {
-        if let Ok(_) = event_loop.register(&handler.port, Token(0), EventSet::readable(), PollOpt::level()) {
+        if let Ok(_) = event_loop.register(&handler.port, Token(0), Ready::readable(), PollOpt::level()) {
             let _ = event_loop.run(&mut handler);
         }
     }

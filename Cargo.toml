@@ -9,7 +9,7 @@ repository = "https://github.com/trlim/serial-mio"
 keywords = ["mio", "serial"]
 
 [dependencies]
-mio = "0.5"
+mio = { git = "https://github.com/carllerche/mio.git" }
 serial = "0.3"
 
 [lib]
