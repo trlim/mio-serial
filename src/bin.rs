@@ -6,38 +6,10 @@ use dotenv::dotenv;
 use std::env;
 
 use serial_mio::{SerialPort, PortSettings};
-use mio::{Ready, PollOpt, Token};
-use mio::deprecated::{EventLoop, Handler};
+use mio::{Events, Poll, Ready, PollOpt, Token};
 use std::io::{Read/*, Write*/};
 
 use std::str;
-
-struct SerialPortHandler {
-    port: SerialPort
-}
-
-impl Handler for SerialPortHandler {
-    type Timeout = ();
-    type Message = ();
-
-    fn ready(&mut self, _event_loop: &mut EventLoop<Self>, token: Token, events: Ready) {
-        match token {
-            Token(0) => {
-                let mut buf = [0; 256];
-                if events.is_readable() {
-                    while let Ok(n) = self.port.read(&mut buf) {
-                        if let Ok(s) = str::from_utf8(&buf[..n]) {
-                            print!("{}", s);
-                        }
-                    }
-                }
-            }
-            _ => {
-                println!("ready {:?} {:?}", token, events);
-            }
-        }
-    }
-}
 
 pub fn main() {
     dotenv().ok();
@@ -48,7 +20,7 @@ pub fn main() {
 
     println!("port {:?}", port_name);
 
-    let serial_port = SerialPort::open_with_settings(port_name.as_str(),
+    let mut serial_port = SerialPort::open_with_settings(port_name.as_str(),
         &PortSettings {
             baud_rate: serial_mio::Baud115200,
             char_size: serial_mio::Bits8,
@@ -57,11 +29,34 @@ pub fn main() {
             flow_control: serial_mio::FlowNone
         }).expect("Can't open serial port");
 
-    let mut handler = SerialPortHandler { port: serial_port };
+    if let Ok(poll) = Poll::new() {
+        if let Ok(_) = poll.register(&serial_port, Token(0), Ready::readable(), PollOpt::level()) {
+            let mut events = Events::with_capacity(256);
+            let mut buf = [0; 256];
 
-    if let Ok(mut event_loop) = EventLoop::new() {
-        if let Ok(_) = event_loop.register(&handler.port, Token(0), Ready::readable(), PollOpt::level()) {
-            let _ = event_loop.run(&mut handler);
+            loop {
+                match poll.poll(&mut events, None) {
+                    Ok(_) => {
+                        for event in &events {
+                            match event.token() {
+                                Token(0) => {
+                                    if event.kind().is_readable() {
+                                        while let Ok(n) = serial_port.read(&mut buf) {
+                                            if let Ok(s) = str::from_utf8(&buf[..n]) {
+                                                print!("{}", s);
+                                            }
+                                        }
+                                    }
+                                }
+                                _ => {
+                                    println!("ready {:?}", event.token());
+                                }
+                            }
+                        }
+                    },
+                    _ => {}
+                }
+            }
         }
     }
 }
