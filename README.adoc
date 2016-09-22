@@ -1,4 +1,4 @@
-= Serial for MIO
+= Serial port I/O for mio
 
 This crate provides extension to David Cuddeback's `serial` for simpler integration with `mio` event loop.
 

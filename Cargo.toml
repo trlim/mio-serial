@@ -9,5 +9,13 @@ repository = "https://github.com/trlim/serial-mio"
 keywords = ["mio", "serial"]
 
 [dependencies]
-mio = "0.5"
+mio = "0.6"
 serial = "0.3"
+dotenv = "0.8"
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "serio"
+path = "src/bin.rs"
