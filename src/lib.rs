@@ -4,6 +4,7 @@ extern crate serial;
 use std::ffi::OsStr;
 use std::io;
 
+// import SerialPort trait for configure()
 use serial::SerialPort as _SerialPort;
 
 // Re-exports
@@ -14,17 +15,27 @@ pub use serial::Parity::*;
 pub use serial::StopBits::*;
 pub use serial::FlowControl::*;
 
+/// A serial port.
+///
+/// This type represents a serial port and is a simple wrapper over `SystemPort` of `serial-rs`.
+///
+/// `SerialPort` implements `Read`, `Write`, `Evented`, `AsRawFd`(or `AsRawHandle` on Windows) traits
+/// for interoperating with other I/O code.
 pub struct SerialPort {
     inner: serial::SystemPort,
 }
 
 impl SerialPort {
+    /// open serial port named by port_name with default settings.
+    ///
     pub fn open<T: AsRef<OsStr> + ?Sized>(port_name: &T) -> io::Result<SerialPort> {
         let system_port = try!(serial::open(port_name));
 
         Ok(SerialPort { inner: system_port })
     }
 
+    /// open serial port named by port_name with custom settings.
+    ///
     pub fn open_with_settings<T: AsRef<OsStr> + ?Sized>(port_name: &T, settings: &PortSettings) -> io::Result<SerialPort> {
         let mut system_port = try!(serial::open(port_name));
 
