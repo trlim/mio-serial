@@ -78,44 +78,54 @@ impl<'a> io::Write for &'a SerialPort {
 }
 
 #[cfg(unix)]
-impl AsRawFd for SerialPort {
-    fn as_raw_fd(&self) -> i32 {
-        self.inner.as_raw_fd()
-    }
-}
+mod sys {
+    use super::SerialPort;
 
-use mio::{Evented, Poll, Token, Ready, PollOpt};
+    use std::io;
+    use mio::{Evented, Poll, Token, Ready, PollOpt};
+    use std::os::unix::io::{AsRawFd};
+    use mio::unix::{EventedFd};
 
-#[cfg(unix)] use mio::unix::{EventedFd};
-#[cfg(unix)] use std::os::unix::io::{AsRawFd};
-
-#[cfg(unix)]
-impl Evented for SerialPort {
-    fn register(&self, poll: &Poll, token: Token, interest: Ready, opts: PollOpt) -> io::Result<()> {
-        EventedFd(&self.as_raw_fd()).register(poll, token, interest, opts)
+    impl AsRawFd for SerialPort {
+        fn as_raw_fd(&self) -> i32 {
+            self.inner.as_raw_fd()
+        }
     }
 
-    fn reregister(&self, poll: &Poll, token: Token, interest: Ready, opts: PollOpt) -> io::Result<()> {
-        EventedFd(&self.as_raw_fd()).reregister(poll, token, interest, opts)
-    }
+    impl Evented for SerialPort {
+        fn register(&self, poll: &Poll, token: Token, interest: Ready, opts: PollOpt) -> io::Result<()> {
+            EventedFd(&self.as_raw_fd()).register(poll, token, interest, opts)
+        }
 
-    fn deregister(&self, poll: &Poll) -> io::Result<()> {
-        EventedFd(&self.as_raw_fd()).deregister(poll)
+        fn reregister(&self, poll: &Poll, token: Token, interest: Ready, opts: PollOpt) -> io::Result<()> {
+            EventedFd(&self.as_raw_fd()).reregister(poll, token, interest, opts)
+        }
+
+        fn deregister(&self, poll: &Poll) -> io::Result<()> {
+            EventedFd(&self.as_raw_fd()).deregister(poll)
+        }
     }
 }
 
 #[cfg(windows)]
-impl Evented for SerialPort {
-    fn register(&self, poll: &Poll, token: Token, interest: Ready, opts: PollOpt) -> io::Result<()> {
-        EventedHandle(&self.as_raw_handle()).register(poll, token, interest, opts)
-    }
+mod sys {
+    use super::SerialPort;
 
-    fn reregister(&self, poll: &Poll, token: Token, interest: Ready, opts: PollOpt) -> io::Result<()> {
-        EventedHandle(&self.as_raw_handle()).reregister(poll, token, interest, opts)
-    }
+    use std::io;
+    use mio::{Evented, Poll, Token, Ready, PollOpt};
 
-    fn deregister(&self, poll: &Poll) -> io::Result<()> {
-        EventedHandle(&self.as_raw_handle()).deregister(poll)
+    impl Evented for SerialPort {
+        fn register(&self, poll: &Poll, token: Token, interest: Ready, opts: PollOpt) -> io::Result<()> {
+            EventedHandle(&self.as_raw_handle()).register(poll, token, interest, opts)
+        }
+
+        fn reregister(&self, poll: &Poll, token: Token, interest: Ready, opts: PollOpt) -> io::Result<()> {
+            EventedHandle(&self.as_raw_handle()).reregister(poll, token, interest, opts)
+        }
+
+        fn deregister(&self, poll: &Poll) -> io::Result<()> {
+            EventedHandle(&self.as_raw_handle()).deregister(poll)
+        }
     }
 }
 
