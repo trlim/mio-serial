@@ -1,3 +1,10 @@
+//! Binding for serial port and `mio`
+//!
+//! This crate provides bindings between `serial-rs` and `mio`.
+//! The APIs and bindings in this crate are somewhat similar to the `mio-uds` crate.
+
+#![deny(missing_docs)]
+
 extern crate mio;
 extern crate serial;
 
@@ -52,6 +59,7 @@ impl SerialPort {
         Ok(SerialPort { inner: system_port })
     }
 
+    /// Will be removed later. Do NOT use!
     pub fn system_port(&mut self) -> &mut serial::SystemPort {
         &mut self.inner
     }
