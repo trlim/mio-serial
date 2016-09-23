@@ -10,7 +10,7 @@ keywords = ["mio", "serial"]
 
 [dependencies]
 mio = "0.6"
-serial = { git = "https://github.com/trlim/serial-rs", rev = "05878ce" }
+serial = { git = "https://github.com/trlim/serial-rs", branch = "tokio" }
 dotenv = "0.8"
 
 [lib]
