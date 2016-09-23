@@ -55,6 +55,12 @@ impl io::Read for SerialPort {
     }
 }
 
+impl<'a> io::Read for &'a SerialPort {
+    fn read(&mut self, bytes: &mut [u8]) -> io::Result<usize> {
+        (&self.inner).read(bytes)
+    }
+}
+
 impl io::Write for SerialPort {
     fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
         self.inner.write(bytes)
@@ -62,6 +68,16 @@ impl io::Write for SerialPort {
 
     fn flush(&mut self) -> io::Result<()> {
         self.inner.flush()
+    }
+}
+
+impl<'a> io::Write for &'a SerialPort {
+    fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
+        (&self.inner).write(bytes)
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        (&self.inner).flush()
     }
 }
 
