@@ -11,12 +11,12 @@ use serial::SerialPort as _SerialPort;
 pub use serial::PortSettings;
 pub use serial::{BaudRate, CharSize, Parity, StopBits, FlowControl};
 
-/// A serial port.
+/// A serial port for `mio`.
 ///
 /// This type represents a serial port and is a simple wrapper over `SystemPort` of `serial-rs`.
 ///
-/// `SerialPort` implements `Read`, `Write`, `Evented`, `AsRawFd`(or `AsRawHandle` on Windows) traits
-/// for interoperating with other I/O code.
+/// `SerialPort` implements `Read`, `Write`, `Evented`, `AsRawFd`(or `AsRawHandle` on Windows)
+/// traits for interoperating with other I/O code.
 pub struct SerialPort {
     inner: serial::SystemPort,
 }
@@ -32,7 +32,9 @@ impl SerialPort {
 
     /// open serial port named by port_name with custom settings.
     ///
-    pub fn open_with_settings<T: AsRef<OsStr> + ?Sized>(port_name: &T, settings: &PortSettings) -> io::Result<SerialPort> {
+    pub fn open_with_settings<T: AsRef<OsStr> + ?Sized>(port_name: &T,
+                                                        settings: &PortSettings)
+                                                        -> io::Result<SerialPort> {
         let mut system_port = try!(serial::open(port_name));
 
         try!(system_port.configure(settings));
@@ -83,8 +85,8 @@ mod sys {
 
     use std::io;
     use mio::{Evented, Poll, Token, Ready, PollOpt};
-    use std::os::unix::io::{AsRawFd};
-    use mio::unix::{EventedFd};
+    use std::os::unix::io::AsRawFd;
+    use mio::unix::EventedFd;
 
     impl AsRawFd for SerialPort {
         fn as_raw_fd(&self) -> i32 {
@@ -93,11 +95,21 @@ mod sys {
     }
 
     impl Evented for SerialPort {
-        fn register(&self, poll: &Poll, token: Token, interest: Ready, opts: PollOpt) -> io::Result<()> {
+        fn register(&self,
+                    poll: &Poll,
+                    token: Token,
+                    interest: Ready,
+                    opts: PollOpt)
+                    -> io::Result<()> {
             EventedFd(&self.as_raw_fd()).register(poll, token, interest, opts)
         }
 
-        fn reregister(&self, poll: &Poll, token: Token, interest: Ready, opts: PollOpt) -> io::Result<()> {
+        fn reregister(&self,
+                      poll: &Poll,
+                      token: Token,
+                      interest: Ready,
+                      opts: PollOpt)
+                      -> io::Result<()> {
             EventedFd(&self.as_raw_fd()).reregister(poll, token, interest, opts)
         }
 
@@ -115,11 +127,21 @@ mod sys {
     use mio::{Evented, Poll, Token, Ready, PollOpt};
 
     impl Evented for SerialPort {
-        fn register(&self, poll: &Poll, token: Token, interest: Ready, opts: PollOpt) -> io::Result<()> {
+        fn register(&self,
+                    poll: &Poll,
+                    token: Token,
+                    interest: Ready,
+                    opts: PollOpt)
+                    -> io::Result<()> {
             EventedHandle(&self.as_raw_handle()).register(poll, token, interest, opts)
         }
 
-        fn reregister(&self, poll: &Poll, token: Token, interest: Ready, opts: PollOpt) -> io::Result<()> {
+        fn reregister(&self,
+                      poll: &Poll,
+                      token: Token,
+                      interest: Ready,
+                      opts: PollOpt)
+                      -> io::Result<()> {
             EventedHandle(&self.as_raw_handle()).reregister(poll, token, interest, opts)
         }
 
@@ -158,13 +180,15 @@ mod tests {
             .expect("Environment variable SERIAL_PORT must be specified");
 
         let mut serial_port = SerialPort::open_with_settings(port_name.as_str(),
-            &PortSettings {
-                baud_rate: BaudRate::Baud115200,
-                char_size: CharSize::Bits8,
-                parity: Parity::ParityNone,
-                stop_bits: StopBits::Stop1,
-                flow_control: FlowControl::FlowNone
-            }).unwrap();
+                                                             &PortSettings {
+                                                                 baud_rate: BaudRate::Baud115200,
+                                                                 char_size: CharSize::Bits8,
+                                                                 parity: Parity::ParityNone,
+                                                                 stop_bits: StopBits::Stop1,
+                                                                 flow_control:
+                                                                     FlowControl::FlowNone,
+                                                             })
+            .unwrap();
 
         setup_serial_port(&mut serial_port.system_port()).unwrap();
 
