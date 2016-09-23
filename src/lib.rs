@@ -9,11 +9,7 @@ use serial::SerialPort as _SerialPort;
 
 // Re-exports
 pub use serial::PortSettings;
-pub use serial::BaudRate::*;
-pub use serial::CharSize::*;
-pub use serial::Parity::*;
-pub use serial::StopBits::*;
-pub use serial::FlowControl::*;
+pub use serial::{BaudRate, CharSize, Parity, StopBits, FlowControl};
 
 /// A serial port.
 ///
@@ -138,7 +134,7 @@ mod tests {
 
     use mio::{Ready, PollOpt, Token};
     use mio::deprecated::{EventLoop, Handler};
-    use super::{SerialPort, PortSettings};
+    use super::*;
 
     pub struct SerialPortHandler {
         port: SerialPort
@@ -191,11 +187,11 @@ mod tests {
 
         let mut serial_port = SerialPort::open_with_settings(port_name.as_str(),
             &PortSettings {
-                baud_rate: serial::Baud115200,
-                char_size: serial::Bits8,
-                parity: serial::ParityNone,
-                stop_bits: serial::Stop1,
-                flow_control: serial::FlowNone
+                baud_rate: BaudRate::Baud115200,
+                char_size: CharSize::Bits8,
+                parity: Parity::ParityNone,
+                stop_bits: StopBits::Stop1,
+                flow_control: FlowControl::FlowNone
             }).unwrap();
 
         setup_serial_port(&mut serial_port.system_port()).unwrap();

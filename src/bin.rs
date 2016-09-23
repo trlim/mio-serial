@@ -5,7 +5,7 @@ extern crate dotenv;
 use dotenv::dotenv;
 use std::env;
 
-use mio_serial::{SerialPort, PortSettings};
+use mio_serial::{SerialPort, PortSettings, BaudRate, CharSize, Parity, StopBits, FlowControl};
 use mio::{Events, Poll, Ready, PollOpt, Token};
 use std::io::{Read/*, Write*/};
 
@@ -22,11 +22,11 @@ pub fn main() {
 
     let mut serial_port = SerialPort::open_with_settings(port_name.as_str(),
         &PortSettings {
-            baud_rate: mio_serial::Baud115200,
-            char_size: mio_serial::Bits8,
-            parity: mio_serial::ParityNone,
-            stop_bits: mio_serial::Stop1,
-            flow_control: mio_serial::FlowNone
+            baud_rate: BaudRate::Baud115200,
+            char_size: CharSize::Bits8,
+            parity: Parity::ParityNone,
+            stop_bits: StopBits::Stop1,
+            flow_control: FlowControl::FlowNone
         }).expect("Can't open serial port");
 
     if let Ok(poll) = Poll::new() {
