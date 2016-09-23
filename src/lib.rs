@@ -119,58 +119,20 @@ impl Evented for SerialPort {
     }
 }
 
-extern crate dotenv;
-
 #[cfg(test)]
 mod tests {
+    extern crate dotenv;
     extern crate serial;
 
-    use dotenv::dotenv;
+    use self::dotenv::dotenv;
     use std::env;
-
     use std::io::{self, Read, Write};
 
-    use serial::SerialPort as _SerialPort;
-
-    use mio::{Ready, PollOpt, Token};
-    use mio::deprecated::{EventLoop, Handler};
+    use mio::{Events, Poll, Ready, PollOpt, Token};
     use super::*;
 
-    pub struct SerialPortHandler {
-        port: SerialPort
-    }
-
-    impl Handler for SerialPortHandler {
-        type Timeout = ();
-        type Message = u32;
-
-        fn ready(&mut self, event_loop: &mut EventLoop<Self>, token: Token, events: Ready) {
-            println!("ready {:?} {:?}", token, events);
-
-            match token {
-                Token(0) => {
-                    let mut buf: Vec<u8> = (0..255).collect();
-                    if events.is_writable() {
-                        self.port.write(&buf[..]).unwrap();
-                    }
-                    if events.is_readable() {
-                        self.port.read(&mut buf[..]).unwrap();
-                    }
-
-                    event_loop.shutdown();
-                }
-                _ => {
-
-                }
-            }
-        }
-        fn notify(&mut self, event_loop: &mut EventLoop<SerialPortHandler>, _msg: Self::Message) {
-            println!("{:?}", _msg);
-            event_loop.shutdown();
-        }
-    }
-
     use std::time::Duration;
+    use serial::SerialPort as _SerialPort;
 
     fn setup_serial_port(serial_port: &mut serial::SystemPort) -> io::Result<()> {
         try!(serial_port.set_timeout(Duration::from_millis(10000)));
@@ -196,16 +158,31 @@ mod tests {
 
         setup_serial_port(&mut serial_port.system_port()).unwrap();
 
-        let mut handler = SerialPortHandler { port: serial_port };
+        let mut events = Events::with_capacity(256);
+        let mut buf = [0; 256];
 
-        let mut event_loop = EventLoop::new().unwrap();
+        let poll = Poll::new().unwrap();
 
-        event_loop.register(&handler.port, Token(0), Ready::writable(), PollOpt::level()).unwrap();
+        poll.register(&serial_port, Token(0), Ready::writable(), PollOpt::level()).unwrap();
 
-        let _ = event_loop.run(&mut handler);
+        assert!(poll.poll(&mut events, None).is_ok());
+        assert!(events.len() > 0);
 
-        event_loop.reregister(&handler.port, Token(0), Ready::readable(), PollOpt::level()).unwrap();
+        for event in &events {
+            assert_eq!(event.token(), Token(0));
+            assert!(event.kind().is_writable());
+            assert!(serial_port.write(&buf[..]).is_ok());
+        }
 
-        let _ = event_loop.run(&mut handler);
+        poll.register(&serial_port, Token(0), Ready::readable(), PollOpt::level()).unwrap();
+
+        assert!(poll.poll(&mut events, None).is_ok());
+        assert!(events.len() > 0);
+
+        for event in &events {
+            assert_eq!(event.token(), Token(0));
+            assert!(event.kind().is_readable());
+            assert!(serial_port.read(&mut buf[..]).is_ok());
+        }
     }
 }
