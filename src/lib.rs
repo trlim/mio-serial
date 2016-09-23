@@ -42,6 +42,15 @@ impl SerialPort {
         Ok(SerialPort { inner: system_port })
     }
 
+    /// Creates a new independently owned handle to the underlying serial port.
+    ///
+    /// The returned `SerialPort` is a reference to the same state that this object references.
+    /// Both handles will read and write.
+    pub fn try_clone(&self) -> io::Result<SerialPort> {
+        let system_port = try!(self.inner.duplicate());
+        Ok(SerialPort { inner: system_port })
+    }
+
     pub fn system_port(&mut self) -> &mut serial::SystemPort {
         &mut self.inner
     }
@@ -217,6 +226,21 @@ mod tests {
             assert_eq!(event.token(), Token(0));
             assert!(event.kind().is_readable());
             assert!(serial_port.read(&mut buf[..]).is_ok());
+        }
+
+        let clone = serial_port.try_clone();
+        assert!(clone.is_ok());
+        let mut clone_port = clone.unwrap();
+
+        poll.register(&clone_port, Token(0), Ready::readable(), PollOpt::level()).unwrap();
+
+        assert!(poll.poll(&mut events, None).is_ok());
+        assert!(events.len() > 0);
+
+        for event in &events {
+            assert_eq!(event.token(), Token(0));
+            assert!(event.kind().is_readable());
+            assert!(clone_port.read(&mut buf[..]).is_ok());
         }
     }
 }
