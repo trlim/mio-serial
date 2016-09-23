@@ -17,6 +17,7 @@ pub use serial::{BaudRate, CharSize, Parity, StopBits, FlowControl};
 ///
 /// `SerialPort` implements `Read`, `Write`, `Evented`, `AsRawFd`(or `AsRawHandle` on Windows)
 /// traits for interoperating with other I/O code.
+#[derive(Debug)]
 pub struct SerialPort {
     inner: serial::SystemPort,
 }
