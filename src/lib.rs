@@ -142,7 +142,14 @@ mod sys {
     use super::SerialPort;
 
     use std::io;
+    use std::os::windows::io::{AsRawHandle, RawHandle};
     use mio::{Evented, Poll, Token, Ready, PollOpt};
+
+    impl AsRawHandle for SerialPort {
+        fn as_raw_handle(&self) -> RawHandle {
+            self.inner.as_raw_handle()
+        }
+    }
 
     impl Evented for SerialPort {
         fn register(&self,
