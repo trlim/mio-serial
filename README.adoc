@@ -16,6 +16,12 @@ serial = "0.3"
 serial-mio = "0.1"
 ----
 
+=== Running tests
+
+----
+RUST_TEST_THREADS=1 cargo test
+----
+
 == Compatibility
 
 The following platforms are confirmed to be compatible:
