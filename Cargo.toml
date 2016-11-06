@@ -12,11 +12,9 @@ keywords = ["mio", "serial"]
 [dependencies]
 mio = "0.6"
 serial = { git = "https://github.com/trlim/serial-rs", branch = "tokio" }
+
+[dev-dependencies]
 dotenv = "0.8"
 
 [lib]
 path = "src/lib.rs"
-
-[[bin]]
-name = "serio"
-path = "src/bin.rs"
