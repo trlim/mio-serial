@@ -1,3 +1,10 @@
+//! Binding for serial port and `mio`
+//!
+//! This crate provides bindings between `serial-rs` and `mio`.
+//! The APIs and bindings in this crate are somewhat similar to the `mio-uds` crate.
+
+#![deny(missing_docs)]
+
 extern crate mio;
 extern crate serial;
 
@@ -9,18 +16,15 @@ use serial::SerialPort as _SerialPort;
 
 // Re-exports
 pub use serial::PortSettings;
-pub use serial::BaudRate::*;
-pub use serial::CharSize::*;
-pub use serial::Parity::*;
-pub use serial::StopBits::*;
-pub use serial::FlowControl::*;
+pub use serial::{BaudRate, CharSize, Parity, StopBits, FlowControl};
 
-/// A serial port.
+/// A serial port for `mio`.
 ///
 /// This type represents a serial port and is a simple wrapper over `SystemPort` of `serial-rs`.
 ///
-/// `SerialPort` implements `Read`, `Write`, `Evented`, `AsRawFd`(or `AsRawHandle` on Windows) traits
-/// for interoperating with other I/O code.
+/// `SerialPort` implements `Read`, `Write`, `Evented`, `AsRawFd`(or `AsRawHandle` on Windows)
+/// traits for interoperating with other I/O code.
+#[derive(Debug)]
 pub struct SerialPort {
     inner: serial::SystemPort,
 }
@@ -36,7 +40,9 @@ impl SerialPort {
 
     /// open serial port named by port_name with custom settings.
     ///
-    pub fn open_with_settings<T: AsRef<OsStr> + ?Sized>(port_name: &T, settings: &PortSettings) -> io::Result<SerialPort> {
+    pub fn open_with_settings<T: AsRef<OsStr> + ?Sized>(port_name: &T,
+                                                        settings: &PortSettings)
+                                                        -> io::Result<SerialPort> {
         let mut system_port = try!(serial::open(port_name));
 
         try!(system_port.configure(settings));
@@ -44,6 +50,16 @@ impl SerialPort {
         Ok(SerialPort { inner: system_port })
     }
 
+    /// Creates a new independently owned handle to the underlying serial port.
+    ///
+    /// The returned `SerialPort` is a reference to the same state that this object references.
+    /// Both handles will read and write.
+    pub fn try_clone(&self) -> io::Result<SerialPort> {
+        let system_port = try!(self.inner.duplicate());
+        Ok(SerialPort { inner: system_port })
+    }
+
+    /// Will be removed later. Do NOT use!
     pub fn system_port(&mut self) -> &mut serial::SystemPort {
         &mut self.inner
     }
@@ -52,6 +68,12 @@ impl SerialPort {
 impl io::Read for SerialPort {
     fn read(&mut self, bytes: &mut [u8]) -> io::Result<usize> {
         self.inner.read(bytes)
+    }
+}
+
+impl<'a> io::Read for &'a SerialPort {
+    fn read(&mut self, bytes: &mut [u8]) -> io::Result<usize> {
+        (&self.inner).read(bytes)
     }
 }
 
@@ -65,135 +87,84 @@ impl io::Write for SerialPort {
     }
 }
 
-#[cfg(unix)]
-impl AsRawFd for SerialPort {
-    fn as_raw_fd(&self) -> i32 {
-        self.inner.as_raw_fd()
+impl<'a> io::Write for &'a SerialPort {
+    fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
+        (&self.inner).write(bytes)
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        (&self.inner).flush()
     }
 }
 
-use mio::{Evented, Poll, Token, Ready, PollOpt};
-
-#[cfg(unix)] use mio::unix::{EventedFd};
-#[cfg(unix)] use std::os::unix::io::{AsRawFd};
-
 #[cfg(unix)]
-impl Evented for SerialPort {
-    fn register(&self, poll: &Poll, token: Token, interest: Ready, opts: PollOpt) -> io::Result<()> {
-        EventedFd(&self.as_raw_fd()).register(poll, token, interest, opts)
+mod sys {
+    use super::SerialPort;
+
+    use std::io;
+    use mio::{Evented, Poll, Token, Ready, PollOpt};
+    use std::os::unix::io::AsRawFd;
+    use mio::unix::EventedFd;
+
+    impl AsRawFd for SerialPort {
+        fn as_raw_fd(&self) -> i32 {
+            self.inner.as_raw_fd()
+        }
     }
 
-    fn reregister(&self, poll: &Poll, token: Token, interest: Ready, opts: PollOpt) -> io::Result<()> {
-        EventedFd(&self.as_raw_fd()).reregister(poll, token, interest, opts)
-    }
+    impl Evented for SerialPort {
+        fn register(&self,
+                    poll: &Poll,
+                    token: Token,
+                    interest: Ready,
+                    opts: PollOpt)
+                    -> io::Result<()> {
+            EventedFd(&self.as_raw_fd()).register(poll, token, interest, opts)
+        }
 
-    fn deregister(&self, poll: &Poll) -> io::Result<()> {
-        EventedFd(&self.as_raw_fd()).deregister(poll)
+        fn reregister(&self,
+                      poll: &Poll,
+                      token: Token,
+                      interest: Ready,
+                      opts: PollOpt)
+                      -> io::Result<()> {
+            EventedFd(&self.as_raw_fd()).reregister(poll, token, interest, opts)
+        }
+
+        fn deregister(&self, poll: &Poll) -> io::Result<()> {
+            EventedFd(&self.as_raw_fd()).deregister(poll)
+        }
     }
 }
 
 #[cfg(windows)]
-impl Evented for SerialPort {
-    fn register(&self, poll: &Poll, token: Token, interest: Ready, opts: PollOpt) -> io::Result<()> {
-        EventedHandle(&self.as_raw_handle()).register(poll, token, interest, opts)
-    }
+mod sys {
+    use super::SerialPort;
 
-    fn reregister(&self, poll: &Poll, token: Token, interest: Ready, opts: PollOpt) -> io::Result<()> {
-        EventedHandle(&self.as_raw_handle()).reregister(poll, token, interest, opts)
-    }
+    use std::io;
+    use mio::{Evented, Poll, Token, Ready, PollOpt};
 
-    fn deregister(&self, poll: &Poll) -> io::Result<()> {
-        EventedHandle(&self.as_raw_handle()).deregister(poll)
-    }
-}
-
-extern crate dotenv;
-
-#[cfg(test)]
-mod tests {
-    extern crate serial;
-
-    use dotenv::dotenv;
-    use std::env;
-
-    use std::io::{self, Read, Write};
-
-    use serial::SerialPort as _SerialPort;
-
-    use mio::{Ready, PollOpt, Token};
-    use mio::deprecated::{EventLoop, Handler};
-    use super::{SerialPort, PortSettings};
-
-    pub struct SerialPortHandler {
-        port: SerialPort
-    }
-
-    impl Handler for SerialPortHandler {
-        type Timeout = ();
-        type Message = u32;
-
-        fn ready(&mut self, event_loop: &mut EventLoop<Self>, token: Token, events: Ready) {
-            println!("ready {:?} {:?}", token, events);
-
-            match token {
-                Token(0) => {
-                    let mut buf: Vec<u8> = (0..255).collect();
-                    if events.is_writable() {
-                        self.port.write(&buf[..]).unwrap();
-                    }
-                    if events.is_readable() {
-                        self.port.read(&mut buf[..]).unwrap();
-                    }
-
-                    event_loop.shutdown();
-                }
-                _ => {
-
-                }
-            }
+    impl Evented for SerialPort {
+        fn register(&self,
+                    poll: &Poll,
+                    token: Token,
+                    interest: Ready,
+                    opts: PollOpt)
+                    -> io::Result<()> {
+            EventedHandle(&self.as_raw_handle()).register(poll, token, interest, opts)
         }
-        fn notify(&mut self, event_loop: &mut EventLoop<SerialPortHandler>, _msg: Self::Message) {
-            println!("{:?}", _msg);
-            event_loop.shutdown();
+
+        fn reregister(&self,
+                      poll: &Poll,
+                      token: Token,
+                      interest: Ready,
+                      opts: PollOpt)
+                      -> io::Result<()> {
+            EventedHandle(&self.as_raw_handle()).reregister(poll, token, interest, opts)
         }
-    }
 
-    use std::time::Duration;
-
-    fn setup_serial_port(serial_port: &mut serial::SystemPort) -> io::Result<()> {
-        try!(serial_port.set_timeout(Duration::from_millis(10000)));
-
-        Ok(())
-    }
-
-    #[test]
-    fn serial_port() {
-        dotenv().ok();
-
-        let port_name = env::var("SERIAL_PORT")
-            .expect("Environment variable SERIAL_PORT must be specified");
-
-        let mut serial_port = SerialPort::open_with_settings(port_name.as_str(),
-            &PortSettings {
-                baud_rate: serial::Baud115200,
-                char_size: serial::Bits8,
-                parity: serial::ParityNone,
-                stop_bits: serial::Stop1,
-                flow_control: serial::FlowNone
-            }).unwrap();
-
-        setup_serial_port(&mut serial_port.system_port()).unwrap();
-
-        let mut handler = SerialPortHandler { port: serial_port };
-
-        let mut event_loop = EventLoop::new().unwrap();
-
-        event_loop.register(&handler.port, Token(0), Ready::writable(), PollOpt::level()).unwrap();
-
-        let _ = event_loop.run(&mut handler);
-
-        event_loop.reregister(&handler.port, Token(0), Ready::readable(), PollOpt::level()).unwrap();
-
-        let _ = event_loop.run(&mut handler);
+        fn deregister(&self, poll: &Poll) -> io::Result<()> {
+            EventedHandle(&self.as_raw_handle()).deregister(poll)
+        }
     }
 }
