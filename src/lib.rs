@@ -15,8 +15,8 @@ use std::io;
 use serial::SerialPort as _SerialPort;
 
 // Re-exports
-pub use serial::PortSettings;
-pub use serial::{BaudRate, CharSize, Parity, StopBits, FlowControl};
+#[doc(no_inline)]
+pub use serial::{PortSettings, BaudRate, CharSize, Parity, StopBits, FlowControl};
 
 /// A serial port for `mio`.
 ///

@@ -5,6 +5,8 @@ with `mio` event loop.
 
 image::https://travis-ci.org/trlim/mio-serial.svg?branch=master[Build Status, link="https://travis-ci.org/trlim/mio-serial"]
 
+link:https://trlim.github.io/mio-serial[Documentation]
+
 == Usage
 
 `Cargo.toml`
