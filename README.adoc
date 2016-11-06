@@ -1,6 +1,7 @@
 = Serial port I/O for mio
 
-This crate provides extension to David Cuddeback's `serial` for simpler integration with `mio` event loop.
+This crate provides extension to David Cuddeback's `serial` for simpler integration
+with `mio` event loop.
 
 == Usage
 
@@ -15,10 +16,12 @@ serial-mio = "0.1"
 
 The following platforms are confirmed to be compatible:
 
-* OS X (x86_64)
+* macOS (x86_64)
 
-== License
+# License
 
-Copyright © 2016 Tae-il Lim
+`mio-serial` is primarily distributed under the terms of both the MIT license and
+the Apache License (Version 2.0), with portions covered by various BSD-like
+licenses.
 
-Distributed under the MIT License.
+See LICENSE-APACHE, and LICENSE-MIT for details.

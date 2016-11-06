@@ -1,9 +1,10 @@
 [package]
 name = "mio-serial"
 version = "0.1.0"
-license = "MIT"
+license = "MIT/Apache-2.0"
 authors = ["Tae-il Lim <trlim@iotok.kr>"]
 description = "Binding for serial-rs and mio"
+readme = "README.adoc"
 homepage = "https://github.com/trlim/mio-serial"
 repository = "https://github.com/trlim/mio-serial"
 keywords = ["mio", "serial"]
