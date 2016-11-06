@@ -3,6 +3,8 @@
 This crate provides extension to David Cuddeback's `serial` for simpler integration
 with `mio` event loop.
 
+image::https://travis-ci.org/trlim/mio-serial.svg?branch=master[Build Status, link="https://travis-ci.org/trlim/mio-serial"]
+
 == Usage
 
 `Cargo.toml`
